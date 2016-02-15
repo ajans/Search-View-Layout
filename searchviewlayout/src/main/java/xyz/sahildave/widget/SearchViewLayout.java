@@ -16,22 +16,19 @@
 
 package xyz.sahildave.widget;
 
-import android.animation.Animator;
-import android.animation.AnimatorListenerAdapter;
-import android.animation.ValueAnimator;
-import android.app.Activity;
-import android.app.Fragment;
-import android.app.FragmentManager;
-import android.app.FragmentTransaction;
 import android.content.Context;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.TransitionDrawable;
+import android.os.Build;
 import android.support.annotation.DrawableRes;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentTransaction;
 import android.support.v4.content.ContextCompat;
+import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.text.Editable;
-import android.text.Spannable;
 import android.text.TextWatcher;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -43,6 +40,11 @@ import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
+
+import com.nineoldandroids.animation.Animator;
+import com.nineoldandroids.animation.AnimatorListenerAdapter;
+import com.nineoldandroids.animation.ValueAnimator;
+import com.nineoldandroids.view.ViewPropertyAnimator;
 
 public class SearchViewLayout extends FrameLayout {
     public static int ANIMATION_DURATION = 1500;
@@ -60,7 +62,6 @@ public class SearchViewLayout extends FrameLayout {
 
     private int toolbarExpandedHeight = 0;
 
-    private ValueAnimator mAnimator;
     private OnToggleAnimationListener mOnToggleAnimationListener;
     private SearchListener mSearchListener;
     private SearchBoxListener mSearchBoxListener;
@@ -75,6 +76,7 @@ public class SearchViewLayout extends FrameLayout {
     private int mExpandedHeight;
     private int mCollapsedHeight;
     private TextView mCollapsedHintView;
+    private ValueAnimator mAnimator;
 
     /***
      * Interface for listening to animation start and finish.
@@ -215,7 +217,11 @@ public class SearchViewLayout extends FrameLayout {
         mBackgroundTransition = new TransitionDrawable(new Drawable[]{mCollapsedDrawable, mExpandedDrawable});
         mBackgroundTransition.setCrossFadeEnabled(true);
 
-        setBackground(mBackgroundTransition);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+            setBackground(mBackgroundTransition);
+        } else {
+            setBackgroundDrawable(mBackgroundTransition);
+        }
         Utils.setPaddingAll(SearchViewLayout.this, 8);
 
         super.onFinishInflate();
@@ -236,9 +242,9 @@ public class SearchViewLayout extends FrameLayout {
      * @param contentFragment fragment which needs to be shown.
      */
 
-    public void setExpandedContentFragment(Activity activity, Fragment contentFragment) {
+    public void setExpandedContentFragment(AppCompatActivity activity, Fragment contentFragment) {
         mExpandedContentFragment = contentFragment;
-        mFragmentManager = activity.getFragmentManager();
+        mFragmentManager = activity.getSupportFragmentManager();
         mExpandedHeight = Utils.getSizeOfScreen(activity).y;
     }
 
@@ -253,7 +259,11 @@ public class SearchViewLayout extends FrameLayout {
 
         mBackgroundTransition = new TransitionDrawable(new Drawable[]{mCollapsedDrawable, mExpandedDrawable});
         mBackgroundTransition.setCrossFadeEnabled(true);
-        setBackground(mBackgroundTransition);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+            setBackground(mBackgroundTransition);
+        } else {
+            setBackgroundDrawable(mBackgroundTransition);
+        }
         Utils.setPaddingAll(SearchViewLayout.this, 8);
     }
 
@@ -357,7 +367,8 @@ public class SearchViewLayout extends FrameLayout {
 
     private void showContentFragment() {
         final FragmentTransaction transaction = mFragmentManager.beginTransaction();
-        transaction.setCustomAnimations(R.anim.fade_in, R.anim.fade_out);
+        //noinspection WrongConstant
+        transaction.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE);
         transaction.replace(R.id.search_expanded_content, mExpandedContentFragment);
         mExpandedContentFragment.setHasOptionsMenu(false);
         transaction.commit();
@@ -369,6 +380,8 @@ public class SearchViewLayout extends FrameLayout {
             return;
         }
         final FragmentTransaction transaction = mFragmentManager.beginTransaction();
+        //noinspection WrongConstant
+        transaction.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE);
         transaction.remove(mExpandedContentFragment).commit();
     }
 
@@ -382,7 +395,7 @@ public class SearchViewLayout extends FrameLayout {
 
         int toYValue = expanding ? toolbarExpandedHeight * (-1) : 0;
 
-        mToolbar.animate()
+        ViewPropertyAnimator.animate(mToolbar)
                 .y(toYValue)
                 .setDuration(ANIMATION_DURATION)
                 .start();

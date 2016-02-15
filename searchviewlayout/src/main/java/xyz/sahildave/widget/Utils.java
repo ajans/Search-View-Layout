@@ -1,16 +1,19 @@
 package xyz.sahildave.widget;
 
-import android.animation.Animator;
-import android.animation.AnimatorListenerAdapter;
-import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Point;
+import android.os.Build;
 import android.view.Display;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.ViewPropertyAnimator;
 import android.view.inputmethod.InputMethodManager;
+
+import com.nineoldandroids.animation.Animator;
+import com.nineoldandroids.animation.AnimatorListenerAdapter;
+import com.nineoldandroids.animation.ValueAnimator;
+import com.nineoldandroids.view.ViewHelper;
+import com.nineoldandroids.view.ViewPropertyAnimator;
 
 /**
  * Created by sahil on 27/10/15.
@@ -33,7 +36,11 @@ public class Utils {
     public static Point getSizeOfScreen(Activity activity) {
         Display display = activity.getWindowManager().getDefaultDisplay();
         Point size = new Point();
-        display.getSize(size);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB_MR2) {
+            display.getSize(size);
+        } else {
+            size.set(display.getWidth(), display.getHeight());
+        }
         return size;
     }
 
@@ -75,10 +82,10 @@ public class Utils {
     }
     public static void fadeOut(final View fadeOut, int durationMs,
                                final AnimationCallback callback) {
-        fadeOut.setAlpha(1);
-        final ViewPropertyAnimator animator = fadeOut.animate();
+        ViewHelper.setAlpha(fadeOut, 1);
+        final ViewPropertyAnimator animator = ViewPropertyAnimator.animate(fadeOut);
         animator.cancel();
-        animator.alpha(0).withLayer().setListener(new AnimatorListenerAdapter() {
+        animator.alpha(0).setListener(new AnimatorListenerAdapter() {
             @Override
             public void onAnimationEnd(Animator animation) {
                 fadeOut.setVisibility(View.GONE);
@@ -90,7 +97,7 @@ public class Utils {
             @Override
             public void onAnimationCancel(Animator animation) {
                 fadeOut.setVisibility(View.GONE);
-                fadeOut.setAlpha(0);
+                ViewHelper.setAlpha(fadeOut, 0);
                 if (callback != null) {
                     callback.onAnimationCancel();
                 }
@@ -106,11 +113,11 @@ public class Utils {
     }
     public static void fadeIn(final View fadeIn, int durationMs, int delay,
                               final AnimationCallback callback) {
-        fadeIn.setAlpha(0);
-        final ViewPropertyAnimator animator = fadeIn.animate();
+        ViewHelper.setAlpha(fadeIn, 0);
+        final ViewPropertyAnimator animator = ViewPropertyAnimator.animate(fadeIn);
         animator.cancel();
         animator.setStartDelay(delay);
-        animator.alpha(1).withLayer().setListener(new AnimatorListenerAdapter() {
+        animator.alpha(1).setListener(new AnimatorListenerAdapter() {
             @Override
             public void onAnimationStart(Animator animation) {
                 fadeIn.setVisibility(View.VISIBLE);
@@ -118,7 +125,7 @@ public class Utils {
 
             @Override
             public void onAnimationCancel(Animator animation) {
-                fadeIn.setAlpha(1);
+                ViewHelper.setAlpha(fadeIn, 1);
                 if (callback != null) {
                     callback.onAnimationCancel();
                 }
@@ -153,6 +160,6 @@ public class Utils {
         anim.setDuration(duration);
         anim.start();
 
-        view.animate().alpha(expanding ? 1 : 0).setDuration(duration / 2).start();
+        ViewPropertyAnimator.animate(view).alpha(expanding ? 1 : 0).setDuration(duration / 2).start();
     }
 }

@@ -30,7 +30,7 @@ android {
     buildToolsVersion "23.0.2"
 
     defaultConfig {
-        minSdkVersion 16
+        minSdkVersion 9
         targetSdkVersion 23
         versionCode 1
         versionName "${mLibraryVersion}"
@@ -41,6 +41,7 @@ dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
     compile 'com.android.support:appcompat-v7:23.1.1'
     compile 'com.android.support:cardview-v7:23.1.1'
+    compile 'com.nineoldandroids:library:2.4.0'
 }
 
 apply from: '../install.gradle'
