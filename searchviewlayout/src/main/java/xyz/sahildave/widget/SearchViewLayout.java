@@ -16,6 +16,7 @@
 
 package xyz.sahildave.widget;
 
+import android.app.Activity;
 import android.content.Context;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
@@ -123,6 +124,9 @@ public class SearchViewLayout extends FrameLayout {
     public SearchViewLayout(Context context, AttributeSet attrs) {
         super(context, attrs);
         ANIMATION_DURATION = context.getResources().getInteger(R.integer.animation_duration);
+        if (context instanceof Activity) {
+            mExpandedHeight = Utils.getSizeOfScreen((Activity) context).y;
+        }
     }
 
     @Override
@@ -245,7 +249,6 @@ public class SearchViewLayout extends FrameLayout {
     public void setExpandedContentFragment(AppCompatActivity activity, Fragment contentFragment) {
         mExpandedContentFragment = contentFragment;
         mFragmentManager = activity.getSupportFragmentManager();
-        mExpandedHeight = Utils.getSizeOfScreen(activity).y;
     }
 
     /***
@@ -366,6 +369,10 @@ public class SearchViewLayout extends FrameLayout {
     }
 
     private void showContentFragment() {
+        if (mFragmentManager == null) {
+            Log.e(LOG_TAG, "Fragment Manager is null. Returning");
+            return;
+        }
         final FragmentTransaction transaction = mFragmentManager.beginTransaction();
         //noinspection WrongConstant
         transaction.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE);
