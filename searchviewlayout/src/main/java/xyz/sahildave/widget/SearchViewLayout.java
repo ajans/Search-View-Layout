@@ -373,6 +373,10 @@ public class SearchViewLayout extends FrameLayout {
             Log.e(LOG_TAG, "Fragment Manager is null. Returning");
             return;
         }
+        if (mExpandedContentFragment == null) {
+            Log.e(LOG_TAG, "Fragment is null. Returning");
+            return;
+        }
         final FragmentTransaction transaction = mFragmentManager.beginTransaction();
         //noinspection WrongConstant
         transaction.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE);
@@ -384,6 +388,10 @@ public class SearchViewLayout extends FrameLayout {
     private void hideContentFragment() {
         if (mFragmentManager == null) {
             Log.e(LOG_TAG, "Fragment Manager is null. Returning");
+            return;
+        }
+        if (mExpandedContentFragment == null) {
+            Log.e(LOG_TAG, "Fragment is null. Returning");
             return;
         }
         final FragmentTransaction transaction = mFragmentManager.beginTransaction();
