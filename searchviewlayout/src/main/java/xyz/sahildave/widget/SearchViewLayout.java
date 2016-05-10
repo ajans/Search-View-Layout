@@ -30,6 +30,7 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.text.Editable;
+import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -63,6 +64,7 @@ public class SearchViewLayout extends FrameLayout {
 
     private int toolbarExpandedHeight = 0;
 
+    private View.OnClickListener mSearchViewOnClickListener;
     private OnToggleAnimationListener mOnToggleAnimationListener;
     private SearchListener mSearchListener;
     private SearchBoxListener mSearchBoxListener;
@@ -76,7 +78,8 @@ public class SearchViewLayout extends FrameLayout {
 
     private int mExpandedHeight;
     private int mCollapsedHeight;
-    private TextView mCollapsedHintView;
+    private TextView mCollapsedTextHintView;
+    private ImageView mCollapsedImageHintView;
     private ValueAnimator mAnimator;
 
     /***
@@ -108,6 +111,12 @@ public class SearchViewLayout extends FrameLayout {
         void afterTextChanged(Editable s);
     }
 
+    public void setSearchViewOnClickListener(View.OnClickListener listener) {
+        mSearchViewOnClickListener = listener;
+        mCollapsed.setOnClickListener(mSearchViewOnClickListener);
+        mSearchIcon.setOnClickListener(mSearchViewOnClickListener);
+        mCollapsedSearchBox.setOnClickListener(mSearchViewOnClickListener);
+    }
 
     public void setOnToggleAnimationListener(OnToggleAnimationListener listener) {
         mOnToggleAnimationListener = listener;
@@ -134,7 +143,8 @@ public class SearchViewLayout extends FrameLayout {
         mCollapsed = (ViewGroup) findViewById(R.id.search_box_collapsed);
         mSearchIcon = findViewById(R.id.search_magnifying_glass);
         mCollapsedSearchBox = findViewById(R.id.search_box_start_search);
-        mCollapsedHintView = (TextView) findViewById(R.id.search_box_collapsed_hint);
+        mCollapsedTextHintView = (TextView) findViewById(R.id.search_box_collapsed_hint);
+        mCollapsedImageHintView = (ImageView) findViewById(R.id.search_box_collapsed_imagehint);
 
         mExpanded = (ViewGroup) findViewById(R.id.search_expanded_root);
         mSearchEditText = (EditText) mExpanded.findViewById(R.id.search_expanded_edit_text);
@@ -152,9 +162,7 @@ public class SearchViewLayout extends FrameLayout {
             }
         });
 
-        mCollapsed.setOnClickListener(mSearchViewOnClickListener);
-        mSearchIcon.setOnClickListener(mSearchViewOnClickListener);
-        mCollapsedSearchBox.setOnClickListener(mSearchViewOnClickListener);
+        setSearchViewOnClickListener(mDefaultSearchViewOnClickListener);
 
         mSearchEditText.setOnFocusChangeListener(new OnFocusChangeListener() {
             @Override
@@ -271,14 +279,33 @@ public class SearchViewLayout extends FrameLayout {
     }
 
     /***
-     * Set hint in the collapsed state
+     * Set text-hint in the collapsed state
      *
      * Also see {@link #setHint(String)}
      * @param searchViewHint
      */
-    public void setCollapsedHint(String searchViewHint) {
-        if (searchViewHint != null) {
-            mCollapsedHintView.setHint(searchViewHint);
+    public void setCollapsedTextHint(String searchViewHint) {
+        if (!TextUtils.isEmpty(searchViewHint)) {
+            mCollapsedTextHintView.setVisibility(View.VISIBLE);
+            mCollapsedTextHintView.setHint(searchViewHint);
+        } else {
+            mCollapsedTextHintView.setVisibility(View.GONE);
+            mCollapsedTextHintView.setHint(null);
+        }
+    }
+
+    /***
+     * Set image-hint in the collapsed state
+     *
+     * Also see {@link #setHint(String)}
+     * @param imageResId
+     */
+    public void setCollapsedImageHint(@DrawableRes int imageResId) {
+        if (imageResId != 0) {
+            mCollapsedImageHintView.setVisibility(View.VISIBLE);
+            mCollapsedImageHintView.setImageResource(imageResId);
+        } else {
+            mCollapsedImageHintView.setVisibility(View.GONE);
         }
     }
 
@@ -289,23 +316,19 @@ public class SearchViewLayout extends FrameLayout {
      * @param searchViewHint
      */
     public void setExpandedHint(String searchViewHint) {
-        if (searchViewHint != null) {
-            mSearchEditText.setHint(searchViewHint);
-        }
+        mSearchEditText.setHint(searchViewHint);
     }
 
     /***
-     * Overrides both, {@link #setCollapsedHint(String)} and {@link #setExpandedHint(String)},
+     * Overrides both, {@link #setCollapsedTextHint(String)} and {@link #setExpandedHint(String)},
      * and sets hint for both the views.
      *
      * Use this if you don't want to show different hints in both the states
      * @param searchViewHint
      */
     public void setHint(String searchViewHint) {
-        if (searchViewHint != null) {
-            mCollapsedHintView.setHint(searchViewHint);
-            mSearchEditText.setHint(searchViewHint);
-        }
+        mCollapsedTextHintView.setHint(searchViewHint);
+        mSearchEditText.setHint(searchViewHint);
     }
 
     public void expand(boolean requestFocus) {
@@ -491,7 +514,7 @@ public class SearchViewLayout extends FrameLayout {
     /**
      * Open the search UI when the user clicks on the search box.
      */
-    private final View.OnClickListener mSearchViewOnClickListener = new View.OnClickListener() {
+    private final View.OnClickListener mDefaultSearchViewOnClickListener = new View.OnClickListener() {
         @Override
         public void onClick(View v) {
             if (!mIsExpanded) {
