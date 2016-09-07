@@ -189,7 +189,7 @@ public class SearchViewLayout extends FrameLayout {
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 if (mSearchEditText.getText().length() > 0) {
-                    if (mExpandedSearchIcon.getVisibility() != View.VISIBLE) {
+                    if (mExpandedSearchIcon.getVisibility() == View.INVISIBLE) {
                         Utils.fadeIn(mExpandedSearchIcon, ANIMATION_DURATION);
                     }
                 } else {
