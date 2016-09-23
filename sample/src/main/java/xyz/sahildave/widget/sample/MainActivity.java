@@ -34,9 +34,9 @@ public class MainActivity extends AppCompatActivity {
         });
 
 
-        final SearchViewLayout searchViewLayout = (SearchViewLayout) findViewById(R.id.search_view_container);
+        final SearchViewLayout searchViewLayout = (SearchViewLayout) findViewById(R.id.search_view);
         searchViewLayout.setExpandedContentFragment(this, new SearchStaticScrollFragment());
-        searchViewLayout.handleToolbarAnimation(toolbar);
+        searchViewLayout.setToolbar(toolbar);
         searchViewLayout.setCollapsedTextHint("Collapsed Hint");
         searchViewLayout.setExpandedHint("Expanded Hint");
 //        searchViewLayout.setHint("Global Hint");

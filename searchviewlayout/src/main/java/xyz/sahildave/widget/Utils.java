@@ -1,11 +1,14 @@
 package xyz.sahildave.widget;
 
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Point;
 import android.os.Build;
+import android.support.annotation.RequiresApi;
 import android.view.Display;
 import android.view.View;
+import android.view.ViewAnimationUtils;
 import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
 
@@ -73,6 +76,74 @@ public class Utils {
         public void onAnimationEnd() {}
         public void onAnimationCancel() {}
     }
+
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    public static void circleRevealView(View view, int duration, final AnimationCallback callback) {
+        // get the center for the clipping circle
+        int cx = view.getWidth();
+        int cy = view.getHeight() / 2;
+
+        // get the final radius for the clipping circle
+        float finalRadius = (float) Math.hypot(cx, cy);
+
+        // create the animator for this view (the start radius is zero)
+        android.animation.Animator anim =
+                ViewAnimationUtils.createCircularReveal(view, cx, cy, 0, finalRadius);
+
+        anim.setDuration(duration);
+        anim.addListener(new android.animation.AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(android.animation.Animator animation) {
+                if (callback != null) {
+                    callback.onAnimationEnd();
+                }
+            }
+
+            @Override
+            public void onAnimationCancel(android.animation.Animator animation) {
+                if (callback != null) {
+                    callback.onAnimationCancel();
+                }
+            }
+        });
+        // make the view visible and start the animation
+        view.setVisibility(View.VISIBLE);
+        anim.start();
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    public static void circleHideView(final View view, int duration) {
+        // get the center for the clipping circle
+        int cx = view.getWidth();
+        int cy = view.getHeight() / 2;
+
+        // get the initial radius for the clipping circle
+        float initialRadius = (float) Math.hypot(cx, cy);
+
+        // create the animation (the final radius is zero)
+        android.animation.Animator anim =
+                ViewAnimationUtils.createCircularReveal(view, cx, cy, initialRadius, 0);
+
+        // make the view invisible when the animation is done
+        android.animation.AnimatorListenerAdapter listenerAdapter = new android.animation.AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(android.animation.Animator animation) {
+                view.setVisibility(View.GONE);
+            }
+
+            @Override
+            public void onAnimationCancel(android.animation.Animator animation) {
+                view.setVisibility(View.GONE);
+            }
+        };
+        anim.addListener(listenerAdapter);
+
+        anim.setDuration(duration);
+
+        // start the animation
+        anim.start();
+    }
+
     public static void crossFadeViews(View fadeIn, View fadeOut, int duration) {
         fadeIn(fadeIn, duration);
         fadeOut(fadeOut, duration);

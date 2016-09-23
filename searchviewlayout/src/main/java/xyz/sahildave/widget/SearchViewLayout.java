@@ -27,6 +27,7 @@ import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.view.CollapsibleActionView;
 import android.support.v7.widget.Toolbar;
 import android.text.Editable;
 import android.text.TextUtils;
@@ -34,6 +35,7 @@ import android.text.TextWatcher;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
@@ -47,8 +49,8 @@ import com.nineoldandroids.animation.AnimatorListenerAdapter;
 import com.nineoldandroids.animation.ValueAnimator;
 import com.nineoldandroids.view.ViewPropertyAnimator;
 
-public class SearchViewLayout extends FrameLayout {
-    public static int ANIMATION_DURATION = 1500;
+public class SearchViewLayout extends FrameLayout implements CollapsibleActionView {
+    public static int ANIMATION_DURATION = 500;
     private static final String LOG_TAG = SearchViewLayout.class.getSimpleName();
 
     private boolean mIsExpanded = false;
@@ -80,6 +82,8 @@ public class SearchViewLayout extends FrameLayout {
     private TextView mCollapsedTextHintView;
     private ImageView mCollapsedImageHintView;
     private ValueAnimator mAnimator;
+    private String mUserQuery;
+    private boolean revealMode = false;
 
     /***
      * Interface for listening to animation start and finish.
@@ -129,13 +133,30 @@ public class SearchViewLayout extends FrameLayout {
         mSearchBoxListener = listener;
     }
 
+    public SearchViewLayout(Context context) {
+        this(context, null);
+    }
+
     public SearchViewLayout(Context context, AttributeSet attrs) {
         super(context, attrs);
+        LayoutInflater inflater = LayoutInflater.from(context);
+        inflater.inflate(R.layout.widget_search_bar, this, true);
+
+        initUi();
+        initAnimationConstraints(context);
+    }
+
+    private void initAnimationConstraints(Context context) {
         ANIMATION_DURATION = context.getResources().getInteger(R.integer.animation_duration);
     }
 
     @Override
     protected void onFinishInflate() {
+        super.onFinishInflate();
+        initUi();
+    }
+
+    private void initUi() {
         mCollapsed = (ViewGroup) findViewById(R.id.search_box_collapsed);
         mSearchIcon = findViewById(R.id.search_magnifying_glass);
         mCollapsedSearchBox = findViewById(R.id.search_box_start_search);
@@ -231,17 +252,41 @@ public class SearchViewLayout extends FrameLayout {
             setBackgroundDrawable(mBackgroundTransition);
         }
         Utils.setPaddingAll(SearchViewLayout.this, 8);
-
-        super.onFinishInflate();
     }
 
-    /***
-     * Should toolbar be animated, y position.
-     * @param toolbar current toolbar which needs to be animated.
-     */
-
-    public void handleToolbarAnimation(Toolbar toolbar) {
+    public void setToolbar(Toolbar toolbar) {
         this.mToolbar = toolbar;
+    }
+
+    @Override
+    public void onActionViewExpanded() {
+        if (mIsExpanded)
+            return;
+        mIsExpanded = true;
+        expand(true, false);
+    }
+
+    @Override
+    public void onActionViewCollapsed() {
+        if (!mIsExpanded)
+            return;
+        mIsExpanded = false;
+        setQuery("", false);
+        clearFocus();
+        collapse(false);
+    }
+
+    public void setQuery(String query, boolean submit) {
+        mSearchEditText.setText(query);
+        if (query != null) {
+            mSearchEditText.setSelection(mSearchEditText.length());
+            mUserQuery = query;
+        }
+
+        // If the query is not empty and submit is requested, submit the query
+        if (submit && !TextUtils.isEmpty(query)) {
+            callSearchListener();
+        }
     }
 
     /***
@@ -329,34 +374,90 @@ public class SearchViewLayout extends FrameLayout {
     }
 
     public void expand(boolean requestFocus) {
+        expand(requestFocus, true);
+    }
+
+    public void expand(boolean requestFocus, boolean animate) {
         mCollapsedHeight = getHeight();
-        toggleToolbar(true);
+        if (mCollapsedHeight == 0 && mToolbar != null) {
+            mCollapsedHeight = mToolbar.getHeight();
+        }
+        toggleToolbar(true, animate);
         if (mBackgroundTransition != null)
-            mBackgroundTransition.startTransition(ANIMATION_DURATION);
+            mBackgroundTransition.startTransition(animate ? ANIMATION_DURATION : 0);
         mIsExpanded = true;
 
-        animateStates(true, 1f, 0f);
-        Utils.crossFadeViews(mExpanded, mCollapsed, ANIMATION_DURATION);
+        if (animate) {
+            if (!revealMode) {
+                animateStates(true, 1f, 0f);
+                Utils.crossFadeViews(mExpanded, mCollapsed, ANIMATION_DURATION);
+            } else {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    setVisibility(View.VISIBLE);
+                    Utils.circleRevealView(this, ANIMATION_DURATION, new Utils.AnimationCallback() {
+                        @Override
+                        public void onAnimationEnd() {
+                            Utils.setPaddingAll(SearchViewLayout.this, 0);
+                            showContentFragment();
+
+                            ViewGroup.LayoutParams params = getLayoutParams();
+                            params.height = mExpandedHeight;
+                            setLayoutParams(params);
+                        }
+                    });
+                } else {
+                    Utils.fadeIn(this, ANIMATION_DURATION);
+                }
+            }
+        } else {
+            if (!revealMode) {
+                mCollapsed.setVisibility(View.GONE);
+                mExpanded.setVisibility(View.VISIBLE);
+            } else {
+                setVisibility(View.VISIBLE);
+            }
+        }
 
         if (requestFocus) {
             mSearchEditText.requestFocus();
         }
+        invalidate();
     }
 
     public void collapse() {
-        toggleToolbar(false);
+        collapse(true);
+    }
+
+    public void collapse(boolean animate) {
+        toggleToolbar(false, animate);
         if (mBackgroundTransition != null)
-            mBackgroundTransition.reverseTransition(ANIMATION_DURATION);
+            mBackgroundTransition.reverseTransition(animate ? ANIMATION_DURATION : 0);
         mSearchEditText.setText(null);
         mIsExpanded = false;
 
-        animateStates(false, 0f, 1f);
-        Utils.crossFadeViews(mCollapsed, mExpanded, ANIMATION_DURATION);
-
+        if (animate) {
+            if (!revealMode) {
+                animateStates(false, 0f, 1f);
+                Utils.crossFadeViews(mCollapsed, mExpanded, ANIMATION_DURATION);
+            } else {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    Utils.circleHideView(this, ANIMATION_DURATION);
+                } else {
+                    Utils.fadeOut(this, ANIMATION_DURATION);
+                }
+            }
+        } else {
+            if (!revealMode) {
+                mCollapsed.setVisibility(View.VISIBLE);
+                mExpanded.setVisibility(View.GONE);
+            } else {
+                setVisibility(View.GONE);
+            }
+        }
         hideContentFragment();
     }
 
-    public boolean isExpanded() {
+    public boolean isActionViewExpanded() {
         return mIsExpanded;
     }
 
@@ -420,10 +521,14 @@ public class SearchViewLayout extends FrameLayout {
         transaction.remove(mExpandedContentFragment).commit();
     }
 
-    private void toggleToolbar(boolean expanding) {
+    private void toggleToolbar(boolean expanding, boolean animate) {
         if (mToolbar == null) return;
 
-        mToolbar.clearAnimation();
+        if (revealMode) return;
+
+        if (animate) {
+            mToolbar.clearAnimation();
+        }
         if (expanding) {
             toolbarExpandedHeight = mToolbar.getHeight();
         }
@@ -432,14 +537,14 @@ public class SearchViewLayout extends FrameLayout {
 
         ViewPropertyAnimator.animate(mToolbar)
                 .y(toYValue)
-                .setDuration(ANIMATION_DURATION)
+                .setDuration(animate ? ANIMATION_DURATION : 0)
                 .start();
 
         Utils.animateHeight(
                 mToolbar,
                 expanding ? toolbarExpandedHeight : 0,
                 expanding ? 0 : toolbarExpandedHeight,
-                ANIMATION_DURATION);
+                animate ? ANIMATION_DURATION : 0);
     }
 
     private void animateStates(final boolean expand, final float start, final float end) {
@@ -489,6 +594,23 @@ public class SearchViewLayout extends FrameLayout {
         mAnimator.start();
     }
 
+    public void setRevealMode(boolean revealMode) {
+        if (this.revealMode == revealMode)
+            return;
+        this.revealMode = revealMode;
+        if (revealMode) {
+            mExpanded.setVisibility(View.VISIBLE);
+            mCollapsed.setVisibility(View.GONE);
+        } else {
+            mCollapsed.setVisibility(View.VISIBLE);
+            mExpanded.setVisibility(View.GONE);
+        }
+    }
+
+    public boolean getRevealMode() {
+        return revealMode;
+    }
+
     private void callSearchListener() {
         Editable editable = mSearchEditText.getText();
         if (editable != null && editable.length() > 0) {
@@ -527,7 +649,7 @@ public class SearchViewLayout extends FrameLayout {
         @Override
         public boolean onKey(View v, int keyCode, KeyEvent event) {
             if (keyCode == KeyEvent.KEYCODE_BACK && event.getAction() == KeyEvent.ACTION_DOWN &&
-                    isExpanded()) {
+                    isActionViewExpanded()) {
                 boolean keyboardHidden = Utils.hideInputMethod(v);
                 if (keyboardHidden) return true;
                 collapse();
