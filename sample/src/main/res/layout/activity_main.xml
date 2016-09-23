@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fitsSystemWindows="true"
-    tools:context="xyz.sahildave.widget.MainActivity">
+    tools:context="xyz.sahildave.widget.sample.MainActivity">
 
     <include layout="@layout/content_main"/>
     <android.support.design.widget.AppBarLayout
